@@ -172,6 +172,10 @@ then InterestFilter.getMatchingPlaces (user, getVisiblePlaces())
   
 **Analysis:** This test confirms the whitelist + strict JSON approach handles trend-driven language well when paired with minimal context. PROMPT_FEWSHOT delivered the most consistent outputs, preventing omissions like historic_charms and avoiding redundant visual tags, while keeping confidence high and hallucinations at zero. The “baseline + glossary hint” tweak worked, but it requires ongoing curation as slang evolves and so the few-shot approach is more maintainable.
 
+## Validators
+
+LLMs can produce subtle logical errors even when prompts are clear, so several validators were added to maintain reliability and interpretability. The whitelist validator ensures every tag and exclusion comes from the predefined AllowedTags, preventing the model from hallucinating or inventing new labels. The contradiction validator checks for known conflicting pairs like quiet_spaces versus lively_nightlife, blocking incoherent tag combinations before they reach the user interface. The tag count validator keeps the model’s output between three and seven tags, balancing precision and breadth so the results remain meaningful. Finally, the confidence validator verifies that confidence values stay within [0,1] and flags low-confidence outputs for user confirmation, maintaining a safe boundary between automation and human oversight. Together these checks form a lightweight but effective guardrail system that keeps AI-driven personalization trustworthy and explainable.
+
 --------- TEMPLATE BELOW ---------
 
 # DayPlanner 
