@@ -17,11 +17,11 @@ principle users pick preference tags, and only matching places are shown to mini
 state
   a set of UserPreferences with
     a user User
-    a tags set String
+    a tags set of Strings
   
   a set of PlaceTags with
     a place Place
-    a tags set String
+    a tags set of Strings
 
 actions
   setPreferences (user: User, tags: set String)
@@ -107,7 +107,9 @@ validators
 # New Sync
 sync aiPreferencesInferred
 when InterestFilter.inferPreferencesFromText (user, text, radius, locationHint) succeeds
-then InterestFilter.getMatchingPlaces (user, getVisiblePlaces())
+then InterestFilter.getMatchingPlaces (user, placesInCurrentMapExtent)
+
+Note: placesInCurrentMapExtent refers to places that are visible in the zoomed in region of the interactive map.
 ```
 
 ## UI Sketches
@@ -127,13 +129,13 @@ then InterestFilter.getMatchingPlaces (user, getVisiblePlaces())
 ## Tag Builder Modal — Guided Tag Creation & Selection
 ![IMG_03DAEA630CE8-1 2](https://github.com/user-attachments/assets/8c8a77de-b7f1-4b13-9b73-7edef669091b)
 
-**User journey**: The user wants to narrow down their place options to areas that they might be interested in exploring so they click on the `Interests` button. The user has the option to input  a description of what they are looking for and letting the LLM generate relevant tags to filter places or click `Manually Add Tags` to manually choose the tags themselves. The user decides to use the LLM option and inputs "I want a quiet place to read but also live music and lively nightlife around me" and clicks the `Apply` button. Since quiet and live music are conflicting, the website generates an alert to the user asking them to select one of the two conflicting tags and apply the filter. If the user wants, they can click `Edit` or `Back` to revise their description but in this cases chooses to Click `Quiet` and then the `Apply` Button. The interactive map and options in the `Filter & Results Sidebar — Personalized Discovery` UI view update with the filtered options in descending order from the places that match the user's interests the most to the least. The user wants to conduct another search, so they click on the `Interests` button again but this time, it brings them to the `User Input & Smart Discovery — Manual Tag Selection` view with colored tags for their previous search. The user can click the `Let us find your vibe` option to filter similar to before but instead clicks `Add Tag` to manually update the filter. They go through the selected tags, adding and removing filters as desired from the list of valid tags, before clicking the `Apply` option once more. 
+**User journey**: The user wants to narrow down their place options to areas that they might be interested in exploring so they click on the `Interests` button. The user has the option to input  a description of what they are looking for and letting the LLM generate relevant tags to filter places or click `Manually Add Tags` to manually choose the tags themselves. The user decides to use the LLM option and inputs "I want a quiet place to read but also live music and lively nightlife around me" and clicks the `Apply` button. Since quiet and live music are conflicting, the website generates an alert to the user asking them to select one of the two conflicting tags and apply the filter. If the user wants, they can click `Edit` or `Back` to revise their description but in this case chooses to Click `Quiet` and then the `Apply` Button. The interactive map and options in the `Filter & Results Sidebar — Personalized Discovery` UI view update with the filtered options in descending order from the places that match the user's interests the most to the least. The user wants to conduct another search, so they click on the `Interests` button again but this time, it brings them to the `User Input & Smart Discovery — Manual Tag Selection` view with colored tags for their previous search. The user can click the `Let us find your vibe` option to filter similar to before but instead clicks `Add Tag` to manually update the filter. They go through the selected tags, adding and removing filters as desired from the list of valid tags, before clicking the `Apply` option once more. 
 
 ## Explore Richer Test Cases and Prompts
 
 ### Test Case 1 — Typical Intent (Baseline Success)
 
-**Note:** The prompts variants mentioned in these experiments/test cases were updated to get the final versions in `prompts.ts`.
+**Note:** The prompt variants mentioned in these experiments/test cases were updated to get the final versions in `prompts.ts`.
 
 **Scenario:** The user opens Interests → AI-assisted and enters: “quiet coastal sunset within 45 minutes of NYC, not crowded, somewhere calm by the water for reading.” The system calls inferPreferencesFromText(user, text, radius=45, locationHint="NYC"). The LLM returns tags like quiet_spaces, waterfront_views, sunset_spots, not_crowded, short_drive, coffee_nooks with high confidence (~0.90). Validators pass (whitelist, tag count, contradictions, confidence), and getMatchingPlaces ranks Larchmont Manor Park highest (score 3), followed by Maplewood Reading Garden (2), Harbor Lights Boardwalk (1), and Riverside Jazz Nights (1).
 
@@ -214,7 +216,7 @@ cp config.json.template config.json
 **Step 2:** Edit `config.json` and add your API key:
 ```json
 {
-  "apiKey": "YOUR_GEMINI_API_KEY_HERE"
+  "apiKey": "YOUR_GEMINI_API_KEY_HERE",
   "model": "gemini-2.5-flash-lite",
   "maxOutputTokens": 256,
   "timeoutMs": 20000
@@ -234,12 +236,6 @@ cp config.json.template config.json
 npm start
 ```
 
-**Run specific test cases:**
-```bash
-npm run test       # Run comprehensive test suite
-npm run build      # Compile TypeScript to JavaScript
-```
-
 ## File Structure
 
 ```
@@ -256,19 +252,6 @@ unwindr-ai-feature/
 ├── dist/                           # Compiled JavaScript output
 └── README.md                       # This file
 ```
-
-## Test Cases
-
-The application includes comprehensive test cases demonstrating different scenarios:
-
-### 1. Typical Intent (Baseline Success)
-Natural language input like "quiet coastal sunset within 45 minutes of NYC, not crowded, somewhere calm by the water for reading" gets translated into structured tags (quiet_spaces, waterfront_views, sunset_spots, not_crowded, short_drive, coffee_nooks) with high confidence.
-
-### 2. Contradictory Intent (Conflict Handling)
-Input like "I want a quiet place to read but also live music and lively nightlife around me" triggers contradiction detection, preventing conflicting tags from being stored and prompting user resolution.
-
-### 3. Slang/Aesthetic Input (Robust Mapping)
-Trendy language like "tiktok-able cottagecore forests, mossy stone bridges, short drive" gets mapped to canonical tags (instagram_worthy, nature_walks, historic_charms, short_drive) with high confidence.
 
 ## Sample Output
 
@@ -296,39 +279,6 @@ Rationale: User seeks peaceful waterfront locations ideal for reading, within re
 - **Validation System**: Multiple validators ensure reliable AI outputs
 - **Flexible Tag System**: Extensible ontology for place categorization
 - **Manual Override**: Users can always manually select tags if preferred
-
-## AI Prompt Variants
-
-The system includes multiple prompt strategies:
-- **PROMPT_BASELINE**: Strict JSON schema with whitelist validation
-- **PROMPT_FEWSHOT**: Includes examples to improve consistency
-- **PROMPT_CONTRACTIONS**: Handles conflicting preferences intelligently
-
-## Validators
-
-- **Whitelist Validator**: Ensures all tags come from predefined AllowedTags
-- **Contradiction Validator**: Detects conflicting tag pairs (e.g., quiet_spaces vs lively_nightlife)
-- **Tag Count Validator**: Maintains 3-7 tags for optimal filtering
-- **Confidence Validator**: Ensures confidence values are within [0,1] range
-
-## Troubleshooting
-
-### "Could not load config.json"
-- Ensure `config.json` exists with your API key
-- Check JSON format is correct
-
-### "Error calling Gemini API"
-- Verify API key is correct
-- Check internet connection
-- Ensure API access is enabled in Google AI Studio
-
-### "Contradiction violation"
-- This is expected behavior for conflicting preferences
-- User will be prompted to resolve the conflict manually
-
-### Build Issues
-- Use `npm run build` to compile TypeScript
-- Check that all dependencies are installed with `npm install`
 
 ## Next Steps
 
