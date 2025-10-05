@@ -1,3 +1,128 @@
+# Assignment 3 — An AI-Augmented Concept
+
+## Unwindr
+Unwindr reimagines how people explore nearby places, replacing endless reviews with instant, visual discovery.
+
+## Concept Selection
+I’m augmenting `InterestFilter` because users naturally describe what they want in messy language (“quiet coastal sunset spot, not crowded”) rather than picking tags. An LLM can map these descriptions into a curated tag ontology (e.g., quiet_spaces, waterfront_views) and add justification + confidence, while the original manual tagging flow still works when AI is off.
+
+## Specifications
+
+### Original Concept (unchanged):
+```markdown
+concept  InterestFilter [User, Place]
+purpose allow users to express their interests so places can be filtered to match their preferences
+principle users pick preference tags, and only matching places are shown to minimize irrelevant options
+
+state
+  a set of UserPreferences with
+    a user User
+    a tags set String
+  
+  a set of PlaceTags with
+    a place Place
+    a tags set String
+
+actions
+  setPreferences (user: User, tags: set String)
+    requires user is authenticated and tags is not empty
+    effect updates user's selected interest tags
+  
+  tagPlace (place: Place, tag: String)
+    requires place exists and tag is valid
+    effect associates tag with place
+  
+  getMatchingPlaces (user: User, places: set Place) : (matches: set Place)
+    requires user has preferences set
+    effect filters places by overlapping tags with user preferences
+```
+
+### AI-Augmented Concept:
+```markdown
+concept InterestFilter [User, Place]
+purpose allow users to express their interests so places can be filtered to match their preferences
+principle users pick interest tags that represent what they are looking for, or can describe their
+  desired “vibe” or activity, which gets translated into interest tags by LLMs, so places can be
+  filtered to match their preferences
+
+state
+  a set of AllowedTags with
+    a tag String
+    a description String
+
+  a set of UserPreferences with
+    a user User
+    a tags set of Strings
+    a source String // "manual" or "llm"
+
+  a set of UserInferredPrefs with
+    a user User
+    a tags set of Strings
+    an exclusions set of Strings
+    a confidence Number
+    a rationale String
+    a lastPrompt String
+
+  a set of PlaceTags with
+    a place Place
+    a tags set of Strings
+
+actions
+  setPreferences (user: User, tags: set String)
+    requires user is authenticated and tags is not empty
+    effect saves or updates the user’s preferences with the given tags and marks them as "manual"
+
+  inferPreferencesFromText (user: User, text: String, radius: optional Number, locationHint: optional String)
+    requires user is authenticated and text is not empty
+    effect calls an AI model to interpret the text and suggest tags and optional exclusions,
+      records confidence and rationale, stores them in UserInferredPrefs,
+      and updates UserPreferences with source = "llm" and the inferred tags
+
+  tagPlace (place: Place, tag: String)
+    requires place exists and tag in AllowedTags
+    effect associates the tag with the place in PlaceTags
+
+  clearPreferences (user: User)
+    requires user is authenticated
+    effect removes all UserPreferences and UserInferredPrefs for the user
+
+  getMatchingPlaces (user: User, places: set Place) : (matches: set Place)
+    requires user has either manual or llm preferences
+    effect returns places whose tags overlap most strongly with the user’s preferred tags,
+      down-ranking places that match excluded tags
+
+  whitelistValidator (tags: set String, exclusions: set String) (valid: Flag)
+    ensures every tag is in AllowedTags
+
+  tagCountValidator (tags: set String) : (valid: Flag)
+    ensures the number of tags is between 3 and 7
+
+  contradictionValidator (tags: set String) : (valid: Flag)
+    ensures conflicting tag pairs (e.g., quiet_spaces vs lively_nightlife) are not both present
+
+  confidenceValidator (confidence: Number) : (valid: Flag)
+    ensures 0 ≤ confidence ≤ 1; if low, prompt user to confirm or edit
+
+# New Sync
+sync aiPreferencesInferred
+when InterestFilter.inferPreferencesFromText (user, text, radius, locationHint) succeeds
+then InterestFilter.getMatchingPlaces (user, getVisiblePlaces())
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+--------- TEMPLATE BELOW ---------
+
 # DayPlanner 
 A simple day planner. This implementation focuses on the core concept of organizing activities for a single day with both manual and AI-assisted scheduling.
 
