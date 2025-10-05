@@ -91,6 +91,7 @@ actions
     effect returns places whose tags overlap most strongly with the user’s preferred tags,
       down-ranking places that match excluded tags
 
+validators
   whitelistValidator (tags: set String, exclusions: set String) (valid: Flag)
     ensures every tag is in AllowedTags
 
@@ -109,17 +110,24 @@ when InterestFilter.inferPreferencesFromText (user, text, radius, locationHint) 
 then InterestFilter.getMatchingPlaces (user, getVisiblePlaces())
 ```
 
+## UI Sketches
 
+### Filter & Results Sidebar — Personalized Discovery
+![Note Sep 28, 2027](https://github.com/user-attachments/assets/c3eabc5f-d254-47a0-b8f7-0b58e9f99a02)
 
+### User Input & Smart Discovery — LLM-Assisted Personalization
+![IMG_49D6DA32787B-1](https://github.com/user-attachments/assets/4875b777-77e4-423f-92f3-238c7ecf39bd)
 
+### Conflict Resolution Modal — Smart Tag Disambiguation
+![Note Sep 28, 2028](https://github.com/user-attachments/assets/b3818395-753c-4faf-91fa-371546360f6c)
 
+### User Input & Smart Discovery — Manual Tag Selection
+![IMG_59027D47D081-1 2](https://github.com/user-attachments/assets/bd2658f1-e150-41ea-b8e4-83f873ecb7b5)
 
+## Tag Builder Modal — Guided Tag Creation & Selection
+![IMG_03DAEA630CE8-1 2](https://github.com/user-attachments/assets/8c8a77de-b7f1-4b13-9b73-7edef669091b)
 
-
-
-
-
-
+**User journey**: The user wants to narrow down their place options to areas that they might be interested in exploring so they click on the `Interests` button. The user has the option to input  a description of what they are looking for and letting the LLM generate relevant tags to filter places or click `Manually Add Tags` to manually choose the tags themselves. The user decides to use the LLM option and inputs "I want a quiet place to read but also live music and lively nightlife around me" and clicks the `Apply` button. Since quiet and live music are conflicting, the website generates an alert to the user asking them to select one of the two conflicting tags and apply the filter. If the user wants, they can click `Edit` or `Back` to revise their description but in this cases chooses to Click `Quiet` and then the `Apply` Button. The interactive map and options in the `Filter & Results Sidebar — Personalized Discovery` UI view update with the filtered options in descending order from the places that match the user's interests the most to the least. The user wants to conduct another search, so they click on the `Interests` button again but this time, it brings them to the `User Input & Smart Discovery — Manual Tag Selection` view with colored tags for their previous search. The user can click the `Let us find your vibe` option to filter similar to before but instead clicks `Add Tag` to manually update the filter. They go through the selected tags, adding and removing filters as desired from the list of valid tags, before clicking the `Apply` option once more. 
 
 --------- TEMPLATE BELOW ---------
 
