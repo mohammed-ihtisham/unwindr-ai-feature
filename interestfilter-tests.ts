@@ -4,7 +4,8 @@ import {
   ALLOWED_TAGS,
   ALLOWED_TAG_STRINGS,
   CONTRADICTION_PAIRS,
-  type Place
+  type Place,
+  type Tag
 } from "./data";
 import {
   PROMPT_BASELINE,
@@ -101,11 +102,14 @@ async function runLLMScenario(opts: {
 export async function testManualTagging() {
   console.log("\nTEST CASE 1: Manual Tagging");
   console.log("==========================");
-  
+
   const filter = new InterestFilter(PLACES);
   
+  const manualTags: Tag[] = ["quiet_spaces", "waterfront_views", "sunset_spots"];
   console.log("Setting manual preferences...");
-  filter.setPreferences("u1", ["quiet_spaces", "waterfront_views", "sunset_spots"]);
+  console.log("Manual tags chosen:", manualTags.join(", "));
+  
+  filter.setPreferences("u1", manualTags);
   
   const matches = filter.getMatchingPlaces("u1", PLACES);
   printMatches(matches);
