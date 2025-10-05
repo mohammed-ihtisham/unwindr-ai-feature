@@ -129,6 +129,49 @@ then InterestFilter.getMatchingPlaces (user, getVisiblePlaces())
 
 **User journey**: The user wants to narrow down their place options to areas that they might be interested in exploring so they click on the `Interests` button. The user has the option to input  a description of what they are looking for and letting the LLM generate relevant tags to filter places or click `Manually Add Tags` to manually choose the tags themselves. The user decides to use the LLM option and inputs "I want a quiet place to read but also live music and lively nightlife around me" and clicks the `Apply` button. Since quiet and live music are conflicting, the website generates an alert to the user asking them to select one of the two conflicting tags and apply the filter. If the user wants, they can click `Edit` or `Back` to revise their description but in this cases chooses to Click `Quiet` and then the `Apply` Button. The interactive map and options in the `Filter & Results Sidebar — Personalized Discovery` UI view update with the filtered options in descending order from the places that match the user's interests the most to the least. The user wants to conduct another search, so they click on the `Interests` button again but this time, it brings them to the `User Input & Smart Discovery — Manual Tag Selection` view with colored tags for their previous search. The user can click the `Let us find your vibe` option to filter similar to before but instead clicks `Add Tag` to manually update the filter. They go through the selected tags, adding and removing filters as desired from the list of valid tags, before clicking the `Apply` option once more. 
 
+## Explore Richer Test Cases and Prompts
+
+### Test Case 1 — Typical Intent (Baseline Success)
+
+**Note:** The prompts variants mentioned in these experiments/test cases were updated to get the final versions in `prompts.ts`.
+
+**Scenario:** The user opens Interests → AI-assisted and enters: “quiet coastal sunset within 45 minutes of NYC, not crowded, somewhere calm by the water for reading.” The system calls inferPreferencesFromText(user, text, radius=45, locationHint="NYC"). The LLM returns tags like quiet_spaces, waterfront_views, sunset_spots, not_crowded, short_drive, coffee_nooks with high confidence (~0.90). Validators pass (whitelist, tag count, contradictions, confidence), and getMatchingPlaces ranks Larchmont Manor Park highest (score 3), followed by Maplewood Reading Garden (2), Harbor Lights Boardwalk (1), and Riverside Jazz Nights (1).
+
+**Prompt variants:**
+- V1: PROMPT_BASELINE (strict JSON + whitelist)
+
+- V2: PROMPT_FEWSHOT (same schema, adds two examples)
+
+- V3: PROMPT_BASELINE + one-line exclusion hint (temporary tweak: add a single instruction line encouraging an exclusion when the text says “not crowded”)
+
+**Analysis:** PROMPT_BASELINE consistently produced 5–6 canonical tags with clear rationale and high confidence, yielding sensible matches. PROMPT_FEWSHOT didn’t materially change the tags for this clean query but slightly improved explanation phrasing and stability across runs. The optional “baseline + exclusion hint” tweak encouraged the model to emit an explicit exclusion (e.g., avoiding nightlife) in addition to not_crowded, which can help down-rank borderline venues. The only remaining quirk is that some runs still express “not crowded” only as a positive tag; a tiny post-processor could convert frequent negations into exclusions reliably.
+
+### Test Case 2 — Contradictory Intent (Conflict Handling)
+
+**Scenario:** The user enters: “I want a quiet place to read but also live music and lively nightlife around me.” The system calls inferPreferencesFromText(user, text). In this run, the LLM returned conflicting tags and the contradiction validator threw a hard error: Contradiction violation: conflicting tags detected: quiet_spaces vs lively_nightlife; quiet_spaces vs live_music. The driver prints the error (modeling a UI modal) and would then prompt the user to pick a priority (e.g., “quiet” vs “live music/nightlife”) before re-running inference with that emphasis.
+
+**Prompt variants:**
+- V1: PROMPT_BASELINE (intentionally likely to produce a contradiction to exercise guardrails)
+
+- V2: PROMPT_CONTRACTIONS (adds policy to prefer the stronger side or lower confidence if ambiguous)
+
+- V3: PROMPT_CONTRACTIONS + appended user emphasis (e.g., “prioritize quiet, avoid nightlife/live music”)
+
+**Analysis:** This scenario confirms the guardrails work as intended: PROMPT_BASELINE triggers a contradiction error, preventing conflicting preferences like “quiet” and “lively nightlife” from being stored. PROMPT_CONTRACTIONS reduces failures by favoring one dominant intent (usually “quiet”) and lowering confidence when ambiguity remains, while adding a short user emphasis (e.g., “prioritize quiet”) resolves conflicts entirely. The main limitation is that genuinely mixed goals—like quiet reading and live music—would require a more expressive, multi-context concept beyond this assignment’s scope.
+
+### Test Case 3 — Slang/Aesthetic Input (Robust Mapping)
+
+**Scenario:** The user enters: “tiktok-able cottagecore forests, mossy stone bridges, short drive.” The system calls inferPreferencesFromText(user, text). The LLM maps slang to canonical tags—instagram_worthy for “tiktok-able/cottagecore,” nature_walks for forests, historic_charms for stone bridges—often including short_drive. Validators pass with high confidence (~0.88). getMatchingPlaces ranks Old Mill Stone Bridge first (score 3), then Larchmont Manor Park and Harbor Lights Boardwalk (1 each).
+
+**Prompt variants:**
+- V1: PROMPT_BASELINE
+
+- V2: PROMPT_FEWSHOT (two tiny examples to stabilize aesthetic → tag mappings)
+
+- V3: PROMPT_BASELINE + one-line glossary hint (temporary tweak: “Treat ‘tiktok-able’, ‘aesthetic’, ‘instagrammable’ as instagram_worthy”)
+  
+**Analysis:** This test confirms the whitelist + strict JSON approach handles trend-driven language well when paired with minimal context. PROMPT_FEWSHOT delivered the most consistent outputs, preventing omissions like historic_charms and avoiding redundant visual tags, while keeping confidence high and hallucinations at zero. The “baseline + glossary hint” tweak worked, but it requires ongoing curation as slang evolves and so the few-shot approach is more maintainable.
+
 --------- TEMPLATE BELOW ---------
 
 # DayPlanner 
