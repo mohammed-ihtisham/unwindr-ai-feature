@@ -1,5 +1,6 @@
 # API keys & local config
 config.json
+config.json.template
 
 # Build output
 dist/
