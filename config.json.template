@@ -1,6 +1,0 @@
-{
-  "apiKey": "AIzaSyCDmxUrUDQTHJPXv9Z0PZSeiMiv4kUjSuw",
-  "model": "gemini-2.5-flash-lite",
-  "maxOutputTokens": 256,
-  "timeoutMs": 20000
-}
