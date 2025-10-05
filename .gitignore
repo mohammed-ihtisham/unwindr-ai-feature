@@ -1,20 +1,32 @@
-# API Keys and sensitive data
+# API keys & local config
 config.json
 
-# Generated files
-generated-schedule.json
-
-# TypeScript build output
+# Build output
 dist/
+*.tsbuildinfo
 
-# Node.js dependencies
+# Dependencies
 node_modules/
+
+# Generated artifacts
+generated-*.json
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# OS generated files
+# Editor/IDE
+.vscode/
+.idea/
+
+# Caches & coverage
+.cache/
+coverage/
+npm-cache/
+
+# OS files
 .DS_Store
 .DS_Store?
 ._*
@@ -22,3 +34,6 @@ npm-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Misc
+.node_repl_history
