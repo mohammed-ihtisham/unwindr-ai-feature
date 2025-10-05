@@ -1,7 +1,7 @@
 # Assignment 3 — An AI-Augmented Concept
 
-## Unwindr
-Unwindr reimagines how people explore nearby places, replacing endless reviews with instant, visual discovery.
+## Unwindr - Place Discovery with AI-Augmented Interest Filtering
+This implementation focuses on the core concept of discovering places through AI-augmented interest filtering, allowing users to express their preferences in natural language and automatically filter places to match their desires.
 
 ## Concept Selection
 I’m augmenting `InterestFilter` because users naturally describe what they want in messy language (“quiet coastal sunset spot, not crowded”) rather than picking tags. An LLM can map these descriptions into a curated tag ontology (e.g., quiet_spaces, waterfront_views) and add justification + confidence, while the original manual tagging flow still works when AI is off.
@@ -176,27 +176,9 @@ then InterestFilter.getMatchingPlaces (user, getVisiblePlaces())
 
 LLMs can produce subtle logical errors even when prompts are clear, so several validators were added to maintain reliability and interpretability. The whitelist validator ensures every tag and exclusion comes from the predefined AllowedTags, preventing the model from hallucinating or inventing new labels. The contradiction validator checks for known conflicting pairs like quiet_spaces versus lively_nightlife, blocking incoherent tag combinations before they reach the user interface. The tag count validator keeps the model’s output between three and seven tags, balancing precision and breadth so the results remain meaningful. Finally, the confidence validator verifies that confidence values stay within [0,1] and flags low-confidence outputs for user confirmation, maintaining a safe boundary between automation and human oversight. Together these checks form a lightweight but effective guardrail system that keeps AI-driven personalization trustworthy and explainable.
 
---------- TEMPLATE BELOW ---------
 
-# DayPlanner 
-A simple day planner. This implementation focuses on the core concept of organizing activities for a single day with both manual and AI-assisted scheduling.
-
-## Concept: DayPlanner
-
-**Purpose**: Help you organize activities for a single day  
-**Principle**: You can add activities one at a time, assign them to times, and then observe the completed schedule
-
-### Core State
-- **Activities**: Set of activities with title, duration, and optional startTime
-- **Assignments**: Set of activity-to-time assignments
-- **Time System**: All times in half-hour slots starting at midnight (0 = 12:00 AM, 13 = 6:30 AM)
-
-### Core Actions
-- `addActivity(title: string, duration: number): Activity`
-- `removeActivity(activity: Activity)`
-- `assignActivity(activity: Activity, startTime: number)`
-- `unassignActivity(activity: Activity)`
-- `requestAssignmentsFromLLM()` - AI-assisted scheduling with hardwired preferences
+---
+# Setting up Repository
 
 ## Prerequisites
 
@@ -207,7 +189,9 @@ A simple day planner. This implementation focuses on the core concept of organiz
 ## Quick Setup
 
 ### 0. Clone the repo locally and navigate to it
-```cd intro-gemini-schedule```
+```bash
+cd unwindr-ai-feature
+```
 
 ### 1. Install Dependencies
 
@@ -231,6 +215,9 @@ cp config.json.template config.json
 ```json
 {
   "apiKey": "YOUR_GEMINI_API_KEY_HERE"
+  "model": "gemini-2.5-flash-lite",
+  "maxOutputTokens": 256,
+  "timeoutMs": 20000
 }
 ```
 
@@ -249,87 +236,80 @@ npm start
 
 **Run specific test cases:**
 ```bash
-npm run manual    # Manual scheduling only
-npm run llm       # LLM-assisted scheduling only
-npm run mixed     # Mixed manual + LLM scheduling
+npm run test       # Run comprehensive test suite
+npm run build      # Compile TypeScript to JavaScript
 ```
 
 ## File Structure
 
 ```
-dayplanner/
-├── package.json              # Dependencies and scripts
-├── tsconfig.json             # TypeScript configuration
-├── config.json               # Your Gemini API key
-├── dayplanner-types.ts       # Core type definitions
-├── dayplanner.ts             # DayPlanner class implementation
-├── dayplanner-llm.ts         # LLM integration
-├── dayplanner-tests.ts       # Test cases and examples
-├── dist/                     # Compiled JavaScript output
-└── README.md                 # This file
+unwindr-ai-feature/
+├── package.json                    # Dependencies and scripts
+├── tsconfig.json                   # TypeScript configuration
+├── config.json                     # Your Gemini API key
+├── interestfilter.ts               # Core InterestFilter implementation
+├── interestfilter-llm.ts           # LLM integration for preference inference
+├── interestfilter-tests.ts         # Test cases and examples
+├── prompts.ts                      # LLM prompt templates and variants
+├── validators.ts                   # Validation logic for AI outputs
+├── data.ts                         # Sample place and tag data
+├── dist/                           # Compiled JavaScript output
+└── README.md                       # This file
 ```
 
 ## Test Cases
 
-The application includes three comprehensive test cases:
+The application includes comprehensive test cases demonstrating different scenarios:
 
-### 1. Manual Scheduling
-Demonstrates adding activities and manually assigning them to time slots:
+### 1. Typical Intent (Baseline Success)
+Natural language input like "quiet coastal sunset within 45 minutes of NYC, not crowded, somewhere calm by the water for reading" gets translated into structured tags (quiet_spaces, waterfront_views, sunset_spots, not_crowded, short_drive, coffee_nooks) with high confidence.
 
-```typescript
-const planner = new DayPlanner();
-const breakfast = planner.addActivity('Breakfast', 1); // 30 minutes
-planner.assignActivity(breakfast, 14); // 7:00 AM
-```
+### 2. Contradictory Intent (Conflict Handling)
+Input like "I want a quiet place to read but also live music and lively nightlife around me" triggers contradiction detection, preventing conflicting tags from being stored and prompting user resolution.
 
-### 2. LLM-Assisted Scheduling
-Shows AI-powered scheduling with hardwired preferences:
-
-```typescript
-const planner = new DayPlanner();
-planner.addActivity('Morning Jog', 2);
-planner.addActivity('Math Homework', 4);
-await llm.requestAssignmentsFromLLM(planner);
-```
-
-### 3. Mixed Scheduling
-Combines manual assignments with AI assistance for remaining activities.
+### 3. Slang/Aesthetic Input (Robust Mapping)
+Trendy language like "tiktok-able cottagecore forests, mossy stone bridges, short drive" gets mapped to canonical tags (instagram_worthy, nature_walks, historic_charms, short_drive) with high confidence.
 
 ## Sample Output
 
 ```
-📅 Daily Schedule
-==================
-7:00 AM - Breakfast (30 min)
-8:00 AM - Morning Workout (1 hours)
-10:00 AM - Study Session (1.5 hours)
-1:00 PM - Lunch (30 min)
-3:00 PM - Team Meeting (1 hours)
-7:00 PM - Dinner (30 min)
-9:00 PM - Evening Reading (1 hours)
+🎯 Interest Filter Results
+==========================
+Input: "quiet coastal sunset within 45 minutes of NYC, not crowded"
+AI-Generated Tags: quiet_spaces, waterfront_views, sunset_spots, not_crowded, short_drive, coffee_nooks
+Confidence: 0.90
+Rationale: User seeks peaceful waterfront locations ideal for reading, within reasonable driving distance, avoiding crowds
 
-📋 Unassigned Activities
-========================
-All activities are assigned!
+📍 Matching Places (Ranked)
+============================
+1. Larchmont Manor Park (Score: 3) - quiet_spaces, waterfront_views, sunset_spots
+2. Maplewood Reading Garden (Score: 2) - quiet_spaces, coffee_nooks
+3. Harbor Lights Boardwalk (Score: 1) - waterfront_views, sunset_spots
+4. Riverside Jazz Nights (Score: 1) - waterfront_views (excluded: not_crowded)
 ```
 
 ## Key Features
 
-- **Simple State Management**: Activities and assignments stored in memory
-- **Flexible Time System**: Half-hour slots from midnight (0-47)
-- **Query-Based Display**: Schedule generated on-demand, not stored sorted
-- **AI Integration**: Hardwired preferences in LLM prompt (no external hints)
-- **Conflict Detection**: Prevents overlapping activities
-- **Clean Architecture**: First principles implementation with no legacy code
+- **Natural Language Processing**: Converts messy user descriptions into structured tags
+- **Conflict Detection**: Identifies and prevents contradictory preferences
+- **Confidence Scoring**: Provides transparency in AI recommendations
+- **Validation System**: Multiple validators ensure reliable AI outputs
+- **Flexible Tag System**: Extensible ontology for place categorization
+- **Manual Override**: Users can always manually select tags if preferred
 
-## LLM Preferences (Hardwired)
+## AI Prompt Variants
 
-The AI uses these built-in preferences:
-- Exercise activities: Morning (6:00 AM - 10:00 AM)
-- Study/Classes: Focused hours (9:00 AM - 5:00 PM)
-- Meals: Regular intervals (breakfast 7-9 AM, lunch 12-1 PM, dinner 6-8 PM)
-- Social/Relaxation: Evenings (6:00 PM - 10:00 PM)
-- Avoid: Demanding activities after 10:00 PM
+The system includes multiple prompt strategies:
+- **PROMPT_BASELINE**: Strict JSON schema with whitelist validation
+- **PROMPT_FEWSHOT**: Includes examples to improve consistency
+- **PROMPT_CONTRACTIONS**: Handles conflicting preferences intelligently
+
+## Validators
+
+- **Whitelist Validator**: Ensures all tags come from predefined AllowedTags
+- **Contradiction Validator**: Detects conflicting tag pairs (e.g., quiet_spaces vs lively_nightlife)
+- **Tag Count Validator**: Maintains 3-7 tags for optimal filtering
+- **Confidence Validator**: Ensures confidence values are within [0,1] range
 
 ## Troubleshooting
 
@@ -342,19 +322,20 @@ The AI uses these built-in preferences:
 - Check internet connection
 - Ensure API access is enabled in Google AI Studio
 
+### "Contradiction violation"
+- This is expected behavior for conflicting preferences
+- User will be prompted to resolve the conflict manually
+
 ### Build Issues
 - Use `npm run build` to compile TypeScript
 - Check that all dependencies are installed with `npm install`
 
 ## Next Steps
 
-Try extending the DayPlanner:
-- Add weekly scheduling
-- Implement activity categories
-- Add location information
+Try extending the InterestFilter:
+- Add location-based filtering
 - Create a web interface
-- Add conflict resolution strategies
-- Implement recurring activities
+- Integrate with real place databases (Google Maps API)
 
 ## Resources
 
